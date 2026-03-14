@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>全球军事飞机百科 - 趣味卡通版</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;700&display=swap');
+        
+        body {
+            font-family: 'Noto Sans SC', sans-serif;
+            background-color: #0f172a;
+            color: #f8fafc;
+        }
+
+        .glass-card {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .glass-card:hover {
+            transform: translateY(-5px);
+            border-color: #3b82f6;
+            box-shadow: 0 10px 25px -5px rgba(59, 130, 246, 0.3);
+        }
+
+        .modal-overlay {
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(5px);
+            display: none;
+            position: fixed;
+            inset: 0;
+            z-index: 50;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+        }
+
+        .modal-active {
+            display: flex;
+        }
+
+        .image-container {
+            position: relative;
+            overflow: hidden;
+            height: 14rem;
+            background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .equipment-tag {
+            background: rgba(51, 65, 85, 0.5);
+            border: 1px solid rgba(148, 163, 184, 0.2);
+            transition: all 0.2s;
+            cursor: pointer;
+        }
+
+        .equipment-tag:hover {
+            background: rgba(59, 130, 246, 0.2);
+            border-color: #3b82f6;
+            transform: scale(1.02);
+        }
+
+        #equipmentDetailPane {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: #1e293b;
+            border-top: 2px solid #3b82f6;
+            transform: translateY(100%);
+            transition: transform 0.3s ease-out;
+            z-index: 60;
+            box-shadow: 0 -10px 25px rgba(0,0,0,0.5);
+        }
+
+        #equipmentDetailPane.active {
+            transform: translateY(0);
+        }
+
+        .ai-glow {
+            animation: glow 2s infinite alternate;
+        }
+
+        @keyframes glow {
+            from { box-shadow: 0 0 5px #3b82f6; }
+            to { box-shadow: 0 0 20px #60a5fa; }
+        }
+    </style>
+</head>
+<body class="min-h-screen">
+
+    <!-- Header -->
+    <header class="sticky top-0 z-40 glass-card border-b border-slate-700 p-4">
+        <div class="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
+            <div class="flex items-center gap-3 cursor-pointer" onclick="location.reload()">
+                <i class="fas fa-paper-plane text-3xl text-blue-500"></i>
+                <h1 class="text-2xl font-bold tracking-tight text-white">全球军事飞机百科</h1>
+            </div>
+            
+            <div class="relative w-full md:w-80">
+                <input type="text" id="searchInput" placeholder="搜索型号..." 
+                    class="w-full bg-slate-800 border border-slate-600 rounded-full py-2 px-10 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all text-sm">
+                <i class="fas fa-search absolute left-4 top-2.5 text-slate-400"></i>
+            </div>
+
+            <div class="flex flex-wrap justify-center gap-2">
+                <button onclick="filterType('all')" id="btn-all" class="px-4 py-1 rounded-full bg-blue-600 text-xs font-bold transition">全部</button>
+                <button onclick="filterType('fighter')" id="btn-fighter" class="px-4 py-1 rounded-full bg-slate-700 text-xs font-bold transition">战斗机</button>
+                <button onclick="filterType('bomber')" id="btn-bomber" class="px-4 py-1 rounded-full bg-slate-700 text-xs font-bold transition">轰炸机</button>
+                <button onclick="filterType('heli')" id="btn-heli" class="px-4 py-1 rounded-full bg-slate-700 text-xs font-bold transition">直升机</button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="max-w-7xl mx-auto p-6">
+        <div id="aircraftGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            <!-- 动态填充 -->
+        </div>
+    </main>
+
+    <!-- Modal -->
+    <div id="modalOverlay" class="modal-overlay" onclick="closeModal(event)">
+        <div class="glass-card max-w-5xl w-full rounded-2xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh] relative" onclick="event.stopPropagation()">
+            
+            <!-- 装备详情面板 -->
+            <div id="equipmentDetailPane" class="p-6">
+                <div class="flex justify-between items-center mb-4">
+                    <div class="flex items-center gap-3 text-blue-400">
+                        <i class="fas fa-bolt"></i>
+                        <h3 id="eqDetailTitle" class="text-xl font-bold"></h3>
+                    </div>
+                    <button onclick="closeEqPane()" class="w-8 h-8 rounded-full bg-slate-700 flex items-center justify-center"><i class="fas fa-times"></i></button>
+                </div>
+                <div id="eqDetailContent" class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm"></div>
+            </div>
+
+            <div id="modalContent" class="p-6 overflow-y-auto"></div>
+            <div class="bg-slate-800 p-4 flex justify-end border-t border-slate-700">
+                <button onclick="closeModal()" class="px-8 py-2 bg-blue-600 hover:bg-blue-500 rounded-lg font-bold transition">完成</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const apiKey = ""; 
+
+        // 统一卡通绘图逻辑
+        function getCartoonSvg(type, color = "#60a5fa") {
+            if (type === 'heli') {
+                return `
+                <svg viewBox="0 0 200 200" class="w-40 h-40 drop-shadow-xl">
+                    <!-- 螺旋桨 -->
+                    <rect x="40" y="55" width="120" height="4" fill="#94a3b8" rx="2">
+                        <animateTransform attributeName="transform" type="rotate" from="0 100 57" to="360 100 57" dur="0.2s" repeatCount="indefinite" />
+                    </rect>
+                    <!-- 机身 -->
+                    <path d="M50 100 Q50 60 100 60 L140 70 Q160 70 160 90 L160 110 Q160 130 140 130 L70 130 Q50 130 50 100 Z" fill="${color}" />
+                    <!-- 机尾 -->
+                    <path d="M160 90 L190 85 L190 95 Z" fill="${color}" />
+                    <!-- 尾桨 -->
+                    <circle cx="190" cy="90" r="10" stroke="#94a3b8" stroke-width="2" fill="none" />
+                    <!-- 挡风玻璃 -->
+                    <path d="M60 85 Q75 65 100 65 L100 95 L65 100 Z" fill="#1e293b" opacity="0.6" />
+                    <!-- 起落架 -->
+                    <path d="M80 130 L80 145 M130 130 L130 145 M70 145 L140 145" stroke="#64748b" stroke-width="4" stroke-linecap="round" />
+                </svg>`;
+            } else if (type === 'bomber') {
+                return `
+                <svg viewBox="0 0 200 200" class="w-40 h-40 drop-shadow-xl">
+                    <path d="M20 100 Q100 20 180 100 L100 120 Z" fill="${color}" />
+                    <path d="M60 105 L140 105 L100 140 Z" fill="${color}" opacity="0.8" />
+                    <rect x="90" y="50" width="20" height="10" rx="5" fill="#1e293b" opacity="0.4" />
+                </svg>`;
+            } else {
+                // 战斗机
+                return `
+                <svg viewBox="0 0 200 200" class="w-40 h-40 drop-shadow-xl">
+                    <path d="M40 100 L100 40 L160 100 L100 120 Z" fill="${color}" />
+                    <path d="M100 20 L115 140 L100 155 L85 140 Z" fill="#f8fafc" />
+                    <ellipse cx="100" cy="65" rx="8" ry="15" fill="#0f172a" />
+                </svg>`;
+            }
+        }
+
+        const aircraftData = [
+            {
+                id: "f35",
+                name: "F-35 闪电 II",
+                englishName: "F-35 Lightning II",
+                type: "fighter",
+                country: "美国",
+                generation: "第五代",
+                themeColor: "#60a5fa",
+                intro: "全能的隐身多用途战机，能像瑞士军刀一样处理各种复杂的战场任务。",
+                stats: { "最大速度": "1.6 马赫", "作战半径": "1,200 公里", "制造商": "洛克希德·马丁" },
+                equipment: [
+                    { type: "雷达", name: "AN/APG-81", specs: { "类型": "有源相控阵", "探测": "150km+" } },
+                    { type: "光电", name: "EOTS 系统", specs: { "分辨率": "超清红外", "功能": "全向瞄准" } }
+                ]
+            },
+            {
+                id: "j20",
+                name: "歼-20 威龙",
+                englishName: "J-20 Mighty Dragon",
+                type: "fighter",
+                country: "中国",
+                generation: "第五代",
+                themeColor: "#ef4444",
+                intro: "重型隐身战机，拥有极佳的超音速性能，是天空中的强力掠食者。",
+                stats: { "最大速度": "2.0+ 马赫", "最大航程": "5,500 公里", "制造商": "成飞工业" },
+                equipment: [
+                    { type: "雷达", name: "KLJ-5 AESA", specs: { "功率": "极高", "抗干扰": "先进" } },
+                    { type: "红外", name: "EORD-31", specs: { "探测": "90km", "模式": "被动安全" } }
+                ]
+            },
+            {
+                id: "ah64",
+                name: "AH-64 阿帕奇",
+                englishName: "AH-64 Apache",
+                type: "heli",
+                country: "美国",
+                generation: "先进武装直升机",
+                themeColor: "#10b981",
+                intro: "世界上最著名的武装直升机，装甲厚重，是坦克和装甲目标的噩梦。",
+                stats: { "最大速度": "293 公里/小时", "作战半径": "480 公里", "制造商": "波音" },
+                equipment: [
+                    { type: "雷达", name: "AN/APG-78 长弓", specs: { "位置": "旋翼顶端", "目标跟踪": "128个", "攻击建议": "自动排序" } },
+                    { type: "武器控制", name: "TADS/PNVS", specs: { "夜视": "第二代前视红外", "头盔联动": "随动射击" } },
+                    { type: "主炮", name: "M230 30mm机炮", specs: { "射速": "625发/分", "备弹": "1200发" } }
+                ]
+            },
+            {
+                id: "b2",
+                name: "B-2 幽灵",
+                englishName: "B-2 Spirit",
+                type: "bomber",
+                country: "美国",
+                generation: "隐形轰炸机",
+                themeColor: "#64748b",
+                intro: "飞翼布局的奇迹，能悄无声息地穿越雷达网，执行远程战略轰炸。",
+                stats: { "最大速度": "0.95 马赫", "最大航程": "11,000 公里", "制造商": "诺格" },
+                equipment: [
+                    { type: "雷达", name: "AN/APQ-181", specs: { "特征": "低可探测", "功能": "地形跟随" } }
+                ]
+            }
+        ];
+
+        let currentFilter = 'all';
+
+        function renderGrid(data) {
+            const grid = document.getElementById('aircraftGrid');
+            grid.innerHTML = data.map(plane => `
+                <div class="glass-card rounded-2xl overflow-hidden cursor-pointer group" onclick="openDetails('${plane.id}')">
+                    <div class="image-container">
+                        ${getCartoonSvg(plane.type, plane.themeColor)}
+                        <div class="absolute top-3 left-3 px-2 py-0.5 bg-black/40 rounded text-[10px] font-bold uppercase tracking-wider">${plane.type}</div>
+                    </div>
+                    <div class="p-5">
+                        <div class="flex justify-between items-center mb-1">
+                            <h3 class="text-xl font-bold">${plane.name}</h3>
+                            <span class="text-[10px] text-blue-400 border border-blue-500/30 px-1.5 py-0.5 rounded">${plane.country}</span>
+                        </div>
+                        <p class="text-slate-400 text-xs font-mono">${plane.englishName}</p>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function openDetails(id) {
+            const plane = aircraftData.find(p => p.id === id);
+            const content = document.getElementById('modalContent');
+            
+            content.innerHTML = `
+                <div class="flex flex-col lg:flex-row gap-8">
+                    <div class="w-full lg:w-1/3">
+                        <div class="image-container rounded-2xl h-64 mb-6 shadow-inner">
+                            ${getCartoonSvg(plane.type, plane.themeColor)}
+                        </div>
+                        <div class="bg-slate-900/50 p-5 rounded-2xl border border-slate-700">
+                            <h4 class="text-xs font-bold text-slate-500 mb-4 uppercase tracking-widest">机载系统与装备</h4>
+                            <div class="space-y-2">
+                                ${plane.equipment.map((eq, idx) => `
+                                    <div class="equipment-tag p-3 rounded-xl flex items-center justify-between" onclick="showEqDetail('${id}', ${idx})">
+                                        <div class="flex items-center gap-3">
+                                            <div class="w-8 h-8 rounded-lg bg-blue-500/20 flex items-center justify-center">
+                                                <i class="fas fa-microchip text-blue-400 text-xs"></i>
+                                            </div>
+                                            <span class="text-xs font-bold text-slate-200">${eq.name}</span>
+                                        </div>
+                                        <i class="fas fa-plus text-[10px] text-slate-600"></i>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="w-full lg:w-2/3">
+                        <div class="flex justify-between items-start mb-6">
+                            <div>
+                                <h2 class="text-4xl font-bold">${plane.name}</h2>
+                                <p class="text-blue-400 font-mono">${plane.englishName}</p>
+                            </div>
+                            <span class="bg-blue-600/20 text-blue-400 text-xs font-bold px-3 py-1 rounded-full border border-blue-500/30">${plane.generation}</span>
+                        </div>
+                        <p class="text-slate-300 bg-slate-800/50 p-5 rounded-2xl border-l-4 border-blue-500 leading-relaxed mb-8">${plane.intro}</p>
+                        
+                        <div class="grid grid-cols-2 md:grid-cols-3 gap-6">
+                            ${Object.entries(plane.stats).map(([k,v]) => `
+                                <div class="bg-slate-800/30 p-3 rounded-xl">
+                                    <p class="text-[10px] text-slate-500 uppercase mb-1">${k}</p>
+                                    <p class="text-sm font-bold text-white">${v}</p>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                </div>
+            `;
+            document.getElementById('modalOverlay').classList.add('modal-active');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function showEqDetail(id, idx) {
+            const eq = aircraftData.find(p => p.id === id).equipment[idx];
+            const pane = document.getElementById('equipmentDetailPane');
+            document.getElementById('eqDetailTitle').innerText = `${eq.type}: ${eq.name}`;
+            document.getElementById('eqDetailContent').innerHTML = Object.entries(eq.specs).map(([k,v]) => `
+                <div class="flex justify-between p-3 bg-slate-800/40 rounded-lg border border-slate-700/50">
+                    <span class="text-slate-400">${k}</span>
+                    <span class="text-blue-300 font-bold">${v}</span>
+                </div>
+            `).join('');
+            pane.classList.add('active');
+        }
+
+        function closeEqPane() {
+            document.getElementById('equipmentDetailPane').classList.remove('active');
+        }
+
+        function closeModal() {
+            closeEqPane();
+            document.getElementById('modalOverlay').classList.remove('modal-active');
+            document.body.style.overflow = 'auto';
+        }
+
+        function filterType(type) {
+            currentFilter = type;
+            document.querySelectorAll('header button').forEach(b => b.className = b.id === `btn-${type}` ? "px-4 py-1 rounded-full bg-blue-600 text-xs font-bold transition" : "px-4 py-1 rounded-full bg-slate-700 text-xs font-bold transition");
+            updateDisplay();
+        }
+
+        function updateDisplay() {
+            const search = document.getElementById('searchInput').value.toLowerCase();
+            const filtered = aircraftData.filter(p => 
+                (p.name.includes(search) || p.englishName.toLowerCase().includes(search)) && 
+                (currentFilter === 'all' || p.type === currentFilter)
+            );
+            renderGrid(filtered);
+        }
+
+        document.getElementById('searchInput').addEventListener('input', updateDisplay);
+        window.onload = () => renderGrid(aircraftData);
+    </script>
+</body>
+</html>
